@@ -1,95 +1,167 @@
-<!-- Substitua TODO o <script> no final do seu HTML pelo código abaixo -->
-<script>
-  function verificarCampos() {
-    const vaga = document.getElementById("vaga").value.trim();
-    const curriculo = document.getElementById("curriculo").value.trim();
-    document.getElementById("botao-analisar").classList.toggle("hidden", !vaga || !curriculo);
-    document.getElementById("botao-relatorio").classList.toggle("hidden", !vaga || !curriculo);
-  }
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ATS - Análise de Currículo</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body class="bg-gray-100 text-gray-900 p-6 transition duration-300" id="body">
+  <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6">
+    <!-- Formulário -->
+    <div class="space-y-4">
+      <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-bold">Análise de Currículo</h1>
+        <button onclick="toggleDarkMode()" class="text-sm text-gray-600 hover:text-black">🌙 Alternar tema</button>
+      </div>
 
-  async function analisarCurriculo() {
-    const curriculo = document.getElementById("curriculo").value;
-    const cargoAtual = document.getElementById("cargoAtual").value;
-    const vaga = document.getElementById("vaga").value;
+      <div>
+        <label for="vaga" class="block font-medium">Link da vaga:</label>
+        <input id="vaga" type="url" placeholder="https://..." class="w-full p-2 border border-gray-300 rounded" />
+      </div>
 
-    try {
-      const resposta = await fetch('https://cbdb8de5-5b50-41c7-8f7c-61820d3ac31c-00-2g4kv1dp3sp2n.worf.replit.dev/analisar', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ curriculo, cargoAtual, vaga })
-      });
+      <div>
+        <label for="cargoAtual" class="block font-medium">Cargo atual:</label>
+        <input id="cargoAtual" type="text" placeholder="Ex: Analista de Dados" class="w-full p-2 border border-gray-300 rounded" />
+      </div>
 
-      const dados = await resposta.json();
+      <div>
+        <h3 class="font-semibold mt-4">Vagas Salvas:</h3>
+        <ul id="lista-vagas" class="list-disc list-inside text-sm mt-2 space-y-1"></ul>
+        <button onclick="limparVagas()" class="mt-2 text-red-600 text-sm hover:underline">Limpar todas</button>
+      </div>
 
-      // Atualiza resultado na interface
-      document.getElementById("resultado").innerText = dados.resultado || "Erro ao analisar.";
-      document.getElementById("sugestoes").innerText = dados.sugestoes || "";
+      <div>
+        <label for="curriculo" class="block font-medium">Currículo (colar aqui):</label>
+        <textarea id="curriculo" rows="12" placeholder="Cole aqui seu currículo em texto..." class="w-full p-2 border border-gray-300 rounded"></textarea>
+      </div>
 
-      // Destaca palavras no currículo
-      const palavras = dados.palavrasDetectadas || [];
-      let curriculoComDestaque = curriculo;
-      palavras.forEach(palavra => {
-        const regex = new RegExp(`(${palavra})`, 'gi');
-        curriculoComDestaque = curriculoComDestaque.replace(regex, '**$1**');
-      });
-      document.getElementById("destacado").innerText = curriculoComDestaque;
+      <button id="botao-analisar" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 hidden">
+        Analisar
+      </button>
+      <button id="botao-relatorio" class="ml-2 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 hidden">
+        Baixar Relatório
+      </button>
+      <button onclick="baixarHistoricoCSV()" class="ml-2 bg-yellow-600 text-white px-4 py-2 rounded hover:bg-yellow-700">
+        Exportar Histórico
+      </button>
+    </div>
 
-      // Adiciona ao histórico
-      adicionarAoHistorico(dados.resultado);
-    } catch (erro) {
-      document.getElementById("resultado").innerText = "Erro ao conectar com o servidor: " + erro.message;
+    <!-- Resultado -->
+    <div>
+      <h2 class="text-xl font-semibold mb-2">Resultado da Análise</h2>
+      <div id="resultado" class="bg-white p-4 border border-gray-300 rounded whitespace-pre-line text-sm font-mono transition transform duration-500 ease-in-out scale-100 opacity-100">
+        Aguardando análise...
+      </div>
+      <div id="sugestoes" class="mt-4 bg-yellow-100 border border-yellow-300 text-yellow-900 p-4 rounded text-sm">
+        Sugestões aparecerão aqui após a análise.
+      </div>
+      <div id="curriculoDestacado" class="mt-4 bg-gray-50 p-4 border border-gray-200 rounded text-sm">
+        <strong>Currículo com destaques:</strong>
+        <div id="destacado" class="mt-2 whitespace-pre-wrap font-mono"></div>
+      </div>
+
+      <div class="mt-6">
+        <h2 class="text-xl font-semibold mb-2">Histórico de Análises</h2>
+        <ul id="historicoLista" class="space-y-2 text-sm"></ul>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function verificarCampos() {
+      const vaga = document.getElementById("vaga").value.trim();
+      const curriculo = document.getElementById("curriculo").value.trim();
+      document.getElementById("botao-analisar").classList.toggle("hidden", !vaga || !curriculo);
+      document.getElementById("botao-relatorio").classList.toggle("hidden", !vaga || !curriculo);
     }
-  }
-
-  function adicionarAoHistorico(texto) {
-    const item = document.createElement("li");
-    item.textContent = texto;
-    document.getElementById("historicoLista").appendChild(item);
-  }
-
-  function baixarRelatorio() {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    const resultado = document.getElementById("resultado").innerText;
-    const sugestoes = document.getElementById("sugestoes").innerText;
-
-    doc.setFont("courier", "normal");
-    doc.setFontSize(12);
-    doc.text("Relatório de Análise de Currículo", 10, 10);
-    doc.setFontSize(10);
-    doc.text("Resultado:", 10, 20);
-    doc.text(resultado, 10, 30);
-    doc.text("\nSugestões:", 10, 90);
-    doc.text(sugestoes, 10, 100);
-
-    doc.save("relatorio_analise_curriculo.pdf");
-  }
-
-  function baixarHistoricoCSV() {
-    const itens = [...document.querySelectorAll("#historicoLista li")].map(li => li.textContent);
-    const csv = "Histórico\n" + itens.join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", "historico_analises.csv");
-    link.click();
-  }
-
-  function limparVagas() {
-    document.getElementById("lista-vagas").innerHTML = "";
-  }
-
-  function toggleDarkMode() {
-    const body = document.getElementById("body");
-    body.classList.toggle("bg-gray-900");
-    body.classList.toggle("text-white");
-  }
-
-  document.getElementById("vaga").addEventListener("input", verificarCampos);
-  document.getElementById("curriculo").addEventListener("input", verificarCampos);
-  document.getElementById("botao-analisar").addEventListener("click", analisarCurriculo);
-  document.getElementById("botao-relatorio").addEventListener("click", baixarRelatorio);
-</script>
+  
+    async function analisarCurriculo() {
+      const curriculo = document.getElementById("curriculo").value;
+      const cargoAtual = document.getElementById("cargoAtual").value;
+      const vaga = document.getElementById("vaga").value;
+  
+      try {
+        const resposta = await fetch('https://cbdb8de5-5b50-41c7-8f7c-61820d3ac31c-00-2g4kv1dp3sp2n.worf.replit.dev/analisar', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ curriculo, cargoAtual, vaga })
+        });
+  
+        const dados = await resposta.json();
+  
+        // Atualiza resultado na interface
+        document.getElementById("resultado").innerText = dados.resultado || "Erro ao analisar.";
+        document.getElementById("sugestoes").innerText = dados.sugestoes || "";
+  
+        // Destaca palavras no currículo
+        const palavras = dados.palavrasDetectadas || [];
+        let curriculoComDestaque = curriculo;
+        palavras.forEach(palavra => {
+          const regex = new RegExp(`(${palavra})`, 'gi');
+          curriculoComDestaque = curriculoComDestaque.replace(regex, '**$1**');
+        });
+        document.getElementById("destacado").innerText = curriculoComDestaque;
+  
+        // Adiciona ao histórico
+        adicionarAoHistorico(dados.resultado);
+      } catch (erro) {
+        document.getElementById("resultado").innerText = "Erro ao conectar com o servidor: " + erro.message;
+      }
+    }
+  
+    function adicionarAoHistorico(texto) {
+      const item = document.createElement("li");
+      item.textContent = texto;
+      document.getElementById("historicoLista").appendChild(item);
+    }
+  
+    function baixarRelatorio() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      const resultado = document.getElementById("resultado").innerText;
+      const sugestoes = document.getElementById("sugestoes").innerText;
+  
+      doc.setFont("courier", "normal");
+      doc.setFontSize(12);
+      doc.text("Relatório de Análise de Currículo", 10, 10);
+      doc.setFontSize(10);
+      doc.text("Resultado:", 10, 20);
+      doc.text(resultado, 10, 30);
+      doc.text("\nSugestões:", 10, 90);
+      doc.text(sugestoes, 10, 100);
+  
+      doc.save("relatorio_analise_curriculo.pdf");
+    }
+  
+    function baixarHistoricoCSV() {
+      const itens = [...document.querySelectorAll("#historicoLista li")].map(li => li.textContent);
+      const csv = "Histórico\n" + itens.join("\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", "historico_analises.csv");
+      link.click();
+    }
+  
+    function limparVagas() {
+      document.getElementById("lista-vagas").innerHTML = "";
+    }
+  
+    function toggleDarkMode() {
+      const body = document.getElementById("body");
+      body.classList.toggle("bg-gray-900");
+      body.classList.toggle("text-white");
+    }
+  
+    document.getElementById("vaga").addEventListener("input", verificarCampos);
+    document.getElementById("curriculo").addEventListener("input", verificarCampos);
+    document.getElementById("botao-analisar").addEventListener("click", analisarCurriculo);
+    document.getElementById("botao-relatorio").addEventListener("click", baixarRelatorio);
+  </script>  
+</body>
+</html>
