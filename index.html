@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ATS - Análise de Currículo</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body class="bg-gray-100 text-gray-900 p-6 transition duration-300">
+  <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6">
+    <!-- Formulário -->
+    <div class="space-y-4">
+      <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-bold">Análise de Currículo</h1>
+      </div>
+
+      <div>
+        <label for="vaga" class="block font-medium">Link da vaga:</label>
+        <input id="vaga" type="url" placeholder="https://..." class="w-full p-2 border border-gray-300 rounded" />
+      </div>
+
+      <div>
+        <label for="cargoAtual" class="block font-medium">Cargo atual:</label>
+        <input id="cargoAtual" type="text" placeholder="Ex: Analista de Dados" class="w-full p-2 border border-gray-300 rounded" />
+      </div>
+
+      <div>
+        <label for="curriculo" class="block font-medium">Currículo (colar aqui):</label>
+        <textarea id="curriculo" rows="12" placeholder="Cole aqui seu currículo em texto..." class="w-full p-2 border border-gray-300 rounded"></textarea>
+      </div>
+
+      <button onclick="analisarCurriculo()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Analisar</button>
+    </div>
+
+    <!-- Resultado -->
+    <div>
+      <h2 class="text-xl font-semibold mb-2">Resultado da Análise</h2>
+      <div id="resultado" class="bg-white p-4 border border-gray-300 rounded whitespace-pre-line text-sm font-mono">Aguardando análise...</div>
+    </div>
+  </div>
+
+  <script>
+    async function analisarCurriculo() {
+      const vaga = document.getElementById("vaga").value;
+      const curriculo = document.getElementById("curriculo").value;
+      const cargoAtual = document.getElementById("cargoAtual").value;
+      const resultadoDiv = document.getElementById("resultado");
+
+      const response = await fetch("https://SEU-BACKEND.repl.co/api/analisar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ vaga, curriculo, cargoAtual }),
+      });
+
+      const data = await response.json();
+      resultadoDiv.innerText = data.resultado || "Erro na análise";
+    }
+  </script>
+</body>
+</html>
