@@ -47,7 +47,7 @@
       const cargoAtual = document.getElementById("cargoAtual").value;
       const resultadoDiv = document.getElementById("resultado");
 
-      const response = await fetch("https://SEU-BACKEND.repl.co/api/analisar", {
+      const response = await fetch("https://replit.com/@distraitproject/analisecurriculoprojeto#index.js", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ vaga, curriculo, cargoAtual }),
